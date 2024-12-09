@@ -5,6 +5,74 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Погодный интерфейс</title>
+    <style>
+        /* Импортируем пользовательский шрифт */
+        @font-face {
+            font-family: 'CustomFont';
+            src: url('/static/fonts/your-font.ttf') format('truetype');
+        }
+
+        body {
+            background-color: #FFD1DC; /* Пастельно-розовый */
+            color: #333; /* Темный текст для контраста */
+            font-family: 'CustomFont', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h2 {
+            color: #990033; /* Глубокий розовый для заголовков */
+        }
+
+        form {
+            background-color: #FFF5F7; /* Светлый розовый для формы */
+            border: 1px solid #FFC0CB; /* Окантовка */
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 400px;
+            margin: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input, button {
+            font-family: 'CustomFont', Arial, sans-serif;
+            padding: 10px;
+            margin-top: 10px;
+            width: calc(100% - 22px); /* Уменьшаем ширину с учетом отступов */
+            border: 1px solid #FFC0CB;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #FFB6C1; /* Розовый */
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #FF69B4; /* Более насыщенный розовый при наведении */
+        }
+
+        p {
+            font-size: 16px;
+        }
+
+        .weather-info ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .weather-info li {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+    </style>
 </head>
 <body>
     <h1>Введите начальную и конечную точки маршрута</h1>
@@ -19,9 +87,28 @@
     </form>
 
     {% if weather %}
-        <h2>Результат погоды:</h2>
-        <p>{{ weather }}</p>
-    {% endif %}
+    <h2>Результат погоды:</h2>
+    <div class="weather-info">
+        <h3>{{ weather.start_city.city }}</h3>
+        <ul>
+            <li><strong>Температура:</strong> {{ weather.start_city.weather['Температура'] }}°C</li>
+            <li><strong>Скорость ветра:</strong> {{ weather.start_city.weather['Скорость ветра'] }} км/ч</li>
+            <li><strong>Влажность:</strong> {{ weather.start_city.weather['Влажность'] }}%</li>
+            <li><strong>Осадки:</strong> {{ weather.start_city.weather['Вероятность осадков'] }}%</li>
+            <li><strong>Условия:</strong> {{ weather.start_city.weather['Погодные условия'] }}</li>
+        </ul>
+    </div>
+    <div class="weather-info">
+        <h3>{{ weather.end_city.city }}</h3>
+        <ul>
+            <li><strong>Температура:</strong> {{ weather.end_city.weather['Температура'] }}°C</li>
+            <li><strong>Скорость ветра:</strong> {{ weather.end_city.weather['Скорость ветра'] }} км/ч</li>
+            <li><strong>Влажность:</strong> {{ weather.end_city.weather['Влажность'] }}%</li>
+            <li><strong>Осадки:</strong> {{ weather.end_city.weather['Вероятность осадков'] }}%</li>
+            <li><strong>Условия:</strong> {{ weather.end_city.weather['Погодные условия'] }}</li>
+        </ul>
+    </div>
+{% endif %}
 
     {% if error %}
         <h2>Ошибка:</h2>

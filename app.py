@@ -4,12 +4,17 @@ from dotenv import load_dotenv
 import requests
 
 app = Flask(__name__)
-API_KEY = "Gdup2wKwcPkIpRFfVKFuWkgLG3a68pJG"
+load_dotenv()
 
-
+API_KEY = os.getenv('API_KEY')
 def get_location_key(city_name, api_key):
     url = f'http://dataservice.accuweather.com/locations/v1/cities/search?q={city_name}&apikey={api_key}'
     response = requests.get(url)
+    if response.status_code == 503:
+        raise ValueError("Кончились попытки :(")
+
+    if response.status_code != 200:
+        raise ValueError(f"Ошибка API: {response.status_code}, {response.text}")
     data = response.json()
     if data:
         return data[0]['Key']
@@ -23,42 +28,42 @@ def check_bad_weather(temperature, wind_speed, humidity, precipitation):
     if precipitation > 70:
         return "Плохие погодные условия (осадки)"
     return "Хорошие погодные условия"
-def get_weather(city_name):
-    base_url = "http://dataservice.accuweather.com/forecasts/v1/daily/1day/"
-    location_url = "http://dataservice.accuweather.com/locations/v1/cities/search"
 
-    # Получение locationKey
-    params = {"apikey": API_KEY, "q": city_name}
-    response = requests.get(location_url, params=params)
+
+def get_current_conditions(location_key, api_key):
+    # URL для текущих погодных условий
+    url = f"http://dataservice.accuweather.com/currentconditions/v1/{location_key}"
+    params = {"apikey": api_key, "details": "true"}  # Параметр details=true для получения полной информации
+    response = requests.get(url, params=params)
+
+    # Логирование ответа API
+    print("Response from Current Conditions API: {response.text}")
+
     if response.status_code != 200:
-        return {"error": f"Ошибка API: {response.status_code}, {response.text}"}
-    location_data = response.json()
-    if not location_data:
-        return {"error": "Не удалось найти город"}
+        raise ValueError(f"Ошибка API: {response.status_code}, {response.text}")
 
-    location_key = location_data[0].get("Key")
-    if not location_key:
-        return {"error": "Не удалось получить locationKey"}
-    forecast_url = f"{base_url}{location_key}"
-    forecast_params = {"apikey": API_KEY, "metric": "true"}
-    forecast_response = requests.get(forecast_url, params=forecast_params)
-    if forecast_response.status_code != 200:
-        return {"error": f"Ошибка API: {forecast_response.status_code}, {forecast_response.text}"}
+    data = response.json()
+    if not data:
+        raise ValueError("Нет данных о текущих погодных условиях")
 
-    forecast_data = forecast_response.json()
-    if "DailyForecasts" not in forecast_data or not forecast_data["DailyForecasts"]:
-        return {"error": "Нет данных о прогнозе"}
+    return data[0]  # Возвращаем первый элемент массива
 
-        # Извлекаем необходимые данные
-    daily_forecast = forecast_data["DailyForecasts"][0]
-    temperature = daily_forecast.get("Temperature", {}).get("Maximum", {}).get("Value", 0)
-    wind_speed = daily_forecast.get("Day", {}).get("Wind", {}).get("Speed", {}).get("Value", 0)
-    humidity = daily_forecast.get("Day", {}).get("Humidity", 0)
-    has_precipitation = daily_forecast.get("Day", {}).get("HasPrecipitation", False)
-    precipitation = 100 if has_precipitation else 0
-    weather_info = extract_weather_info(temperature, wind_speed, humidity, precipitation)
 
-    return weather_info
+def get_weather(city_name):
+    # Получаем ключ локации
+    location_key = get_location_key(city_name, API_KEY)
+
+    # Получаем текущие погодные условия
+    current_conditions = get_current_conditions(location_key, API_KEY)
+
+    # Извлекаем нужные данные
+    temperature = current_conditions["Temperature"]["Metric"]["Value"]
+    wind_speed = current_conditions["Wind"]["Speed"]["Metric"]["Value"]
+    humidity = current_conditions.get("RelativeHumidity", 0)
+    precipitation = 100 if current_conditions.get("HasPrecipitation", False) else 0
+
+    return extract_weather_info(temperature, wind_speed, humidity, precipitation)
+
 def extract_weather_info(temperature, wind_speed, humidity, precipitation):
     weather_condition = check_bad_weather(temperature, wind_speed, humidity, precipitation)
     return {
@@ -93,8 +98,18 @@ def weather():
 
         # Формирование результата
         #weather_info = f"Погода в {start_city}: {start_weather_status}\nПогода в {end_city}: {end_weather_status}"
-        weather_info = f"Погода в {start_city}: {start_weather}\nПогода в {end_city}: {end_weather}"
-        return render_template('index.html', weather=weather_info)
+        weather_data = {
+            'start_city': {
+                'city': start_city,
+                'weather': start_weather
+            },
+            'end_city': {
+                'city': end_city,
+                'weather': end_weather
+            }
+        }
+
+        return render_template('index.html', weather=weather_data)
 
     except Exception as e:
         return render_template('index.html', error=str(e))
